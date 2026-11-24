@@ -42,28 +42,56 @@ keep it until its `Pictures\Corporations` cache folder is cleared.
 
 ## Install (once per server)
 
-From this folder:
+Download the release ZIP from `dist/` (or clone this repository), then pick
+the route that matches how you run EveJS.
+
+### Docker, or native without the launcher
+
+Double-click `install.cmd` (or run `python install.py`) and answer the
+questions: your EveJS folder, and whether EveJS runs in Docker, through
+EVEJS Launcher, or natively with `StartServer.bat`. Without questions:
 
 ```sh
-python install.py --check  "C:\EVE\evejs"    # report only
-python install.py          "C:\EVE\evejs"    # install
-python install.py --remove "C:\EVE\evejs"    # remove
+python install.py "C:\EVE\evejs" --docker --rebuild   # Docker: install, rebuild and restart
+python install.py "C:\EVE\evejs" --native             # native, Game stopped
+python install.py "C:\EVE\evejs" --check              # report only
+python install.py "C:\EVE\evejs" --remove --docker --rebuild
 ```
 
-Then rebuild the server image (Docker: `RebuildPlayerbots.bat`, or
-`docker compose up --build --detach`) or restart EveJS (native).
+- **Docker:** `--rebuild` rebuilds the image and restarts the server. With
+  Playerbots installed it runs `addons/playerbots/playerbots.py rebuild`, so
+  Playerbots' own Compose settings (launcher or Server Panel files, project
+  name) are kept; otherwise it runs `docker compose build init` and
+  `up -d server`. Without `--rebuild`, rebuild yourself (for example
+  `RebuildPlayerbots.bat`).
+- **Native:** Game must be stopped; the installer checks its port and
+  changes nothing while Game runs. Start Game afterwards.
 
-What it changes, each file backed up first to
-`<evejs>\.corp-logo-addon-backup-<time>\`:
+### EVEJS Launcher (native)
+
+1. Stop Game.
+2. **Mods → Import** and choose `evejs-corporation-logos-launcher-v<version>.zip`.
+3. Enable **Corporation Logos**, then start Game.
+
+Disable and Remove in the launcher put the EveJS files back; logo images
+are kept. Don't also run `install.py` on a launcher-managed folder: it
+refuses native changes there. The mod's folder holds
+`Set-Corporation-Logo.cmd` for setting logos.
+
+### What changes in EveJS
+
+Each file is backed up first, to `<evejs>\.corp-logo-addon-backup-<time>\`
+(`install.py`) or `<evejs>\_local\corporation-logos\backups\` (launcher):
 
 | File | Change |
 | --- | --- |
 | `server/src/services/corporation/corporationLogoClientDelivery.js` | New: builds the client patch. |
 | `server/src/network/tcp/handshake.js` | One block that adds the patch to the login script. |
-| `server/src/_secondary/image/imageRequestResolver.js` | Lets the image server answer `/Corporation/<id>_<size>.png` with the stored PNG. Left alone when the file already does this (an earlier hand edit); `--remove` takes out only the lines this add-on added. |
+| `server/src/_secondary/image/imageRequestResolver.js` | Lets the image server answer `/Corporation/<id>_<size>.png` with the stored PNG. Left alone when the file already does this (an earlier hand edit); removal takes out only the lines this add-on added. |
 
-The add-on never edits a file Playerbots manages. Check that it is in
-place after updating EveJS itself, since an update can replace these files.
+The add-on never edits a file Playerbots manages, in either its Docker or
+its launcher form. An EveJS update can replace these files: run
+`install.py --check` (or re-enable the mod) afterwards.
 
 ## Method 1: standalone
 
@@ -76,8 +104,13 @@ python corp_logo.py list   "C:\EVE\evejs"
 ```
 
 - **Docker:** the server must be running. The logo is written into its
-  volume with `docker compose exec`; nothing is rebuilt. Add `--docker` or
-  `--native` to choose explicitly.
+  volume with `docker compose exec`, using the same Compose files and project
+  as Playerbots when it is installed; nothing is rebuilt. `--project-name`
+  and `--compose-file` override them. Add `--docker` or `--native` to choose
+  explicitly.
+- **Native:** the logo goes into `_local/gameStore/images/Corporation` in the
+  EveJS folder. If your game store lives elsewhere, add `--data-dir` with its
+  `data` folder.
 - **Images:** with Pillow installed (`pip install pillow`), any PNG, JPEG,
   WebP or GIF works: it is centred on a transparent square and resized for
   each size. Without Pillow, use a square PNG; it is stored as is at every
@@ -110,14 +143,22 @@ launcher). Corporations with a PNG show the PNG either way.
 
 | Path | What it is |
 | --- | --- |
-| `install.py` | Installs, checks or removes the server side (once per server). |
-| `corp_logo.py`, `Set-Corporation-Logo.cmd` | The standalone tool and its Windows double-click launcher. |
+| `install.py`, `install.cmd` | The installer for Docker and native installs, with questions or flags. |
+| `launcher/` | The EVEJS Launcher mod: `evejs-launcher.mod.json` and `helper.cjs`, the lifecycle helper the launcher runs. |
+| `lib/patch.cjs` | The server changes in Node.js, used by the launcher helper; tests check it writes exactly what `install.py` writes. |
+| `corp_logo.py`, `Set-Corporation-Logo.cmd` | The standalone logo tool and its double-click launcher. |
 | `tools/corp-logo-store.js` | The part of `corp_logo.py` that runs where EveJS runs (passed with `node -e`). |
-| `files/server/src/services/corporation/corporationLogoClientDelivery.js` | The client patch `install.py` copies into EveJS. |
+| `addon_common.py` | Compose settings, Game-port check and prompts shared by the two Python tools. |
+| `files/server/src/services/corporation/corporationLogoClientDelivery.js` | The client patch copied into EveJS. |
+| `tools/build.py`, `dist/` | Builds the launcher ZIP and the full release ZIP; both are committed. |
 | `tests/` | `python -m unittest discover tests` (needs Node.js; Pillow optional). |
 
 ## Limits
 
+- The launcher package follows the format of the Playerbots launcher
+  package (manifest schema 3, helper protocol `evejs_launcher_mod_v1`, EVEJS
+  Launcher 1.0.91 or later). It is tested by driving its helper the way the
+  launcher does, not yet in EVEJS Launcher itself.
 - The client patch targets `eveIcon.CorpIcon.DoLayout` in client build
   3396210, the build EveJS 261115.2 serves. Check it again after a client
   update.

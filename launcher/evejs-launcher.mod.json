@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 3,
+  "id": "evejs-corporation-logos",
+  "displayName": "Corporation Logos",
+  "version": "1.0.0",
+  "description": "Shows player and bot corporations with your own PNG logos in game instead of their emblem, the way alliances show theirs. Set logos with Set-Corporation-Logo or the Playerbots dashboard.",
+  "kind": "source-integrated",
+  "supportedBackends": [
+    "native"
+  ],
+  "activation": {
+    "strategy": "package"
+  },
+  "restart": "game_server",
+  "launcherApi": {
+    "version": 1,
+    "minLauncherVersion": "1.0.91",
+    "helper": {
+      "runtime": "node",
+      "path": "helper.cjs"
+    },
+    "capabilities": [
+      "install",
+      "prepare_disable",
+      "prepare_remove",
+      "recover"
+    ]
+  }
+}

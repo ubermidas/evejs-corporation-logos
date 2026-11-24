@@ -26,6 +26,7 @@ import argparse
 import base64
 import io
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -33,6 +34,9 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import addon_common as common  # noqa: E402
+
 STORE_SCRIPT = HERE / "tools" / "corp-logo-store.js"
 SIZES = (32, 64, 128, 256, 512, 1024)
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
@@ -88,16 +92,13 @@ def corporation_id(value: str) -> int:
     return number
 
 
-def detect_mode(root: Path, requested: str | None) -> str:
+def detect_mode(root: Path, requested: str | None, settings: dict) -> str:
+    if requested == "docker" and not common.docker_server_running(root, settings):
+        raise SystemExit("The EveJS server container is not running. Start EveJS, then try again.")
     if requested:
         return requested
-    if (root / "compose.yaml").is_file() and shutil.which("docker"):
-        probe = subprocess.run(
-            ["docker", "compose", "-f", "compose.yaml", "ps", "-q", "server"],
-            cwd=root, capture_output=True, text=True,
-        )
-        if probe.returncode == 0 and probe.stdout.strip():
-            return "docker"
+    if common.looks_like_docker(root) and common.docker_server_running(root, settings):
+        return "docker"
     if shutil.which("node"):
         return "native"
     if (root / "compose.yaml").is_file():
@@ -105,13 +106,17 @@ def detect_mode(root: Path, requested: str | None) -> str:
     raise SystemExit("Node.js was not found, so the logo cannot be stored. Install Node.js or run this where EveJS runs.")
 
 
-def run_store(root: Path, mode: str, request: dict) -> dict:
+def run_store(root: Path, mode: str, request: dict, settings: dict | None = None, data_dir: str = "") -> dict:
     script = STORE_SCRIPT.read_text(encoding="utf-8")
     if mode == "docker":
-        command = ["docker", "compose", "-f", "compose.yaml", "exec", "-T", "server", "node", "-e", script]
+        command = common.compose_command(settings or common.compose_settings(root), "exec", "-T", "server", "node", "-e", script)
+        environment = None
     else:
         command = ["node", "-e", script]
-    result = subprocess.run(command, cwd=root, input=json.dumps(request).encode("utf-8"), capture_output=True)
+        environment = dict(os.environ)
+        if data_dir:
+            environment["EVEJS_GAMESTORE_DATA_DIR"] = str(Path(data_dir).expanduser().resolve())
+    result = subprocess.run(command, cwd=root, input=json.dumps(request).encode("utf-8"), capture_output=True, env=environment)
     output = result.stdout.decode("utf-8", "replace").strip().splitlines()
     try:
         reply = json.loads(output[-1]) if output else {}
@@ -154,6 +159,9 @@ def main(argv: list[str]) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--docker", dest="mode", action="store_const", const="docker", help="EveJS runs in Docker")
     mode.add_argument("--native", dest="mode", action="store_const", const="native", help="EveJS runs natively")
+    parser.add_argument("--data-dir", default="", help="native: the game store data folder, when it is not the default _local/gameStore/data")
+    parser.add_argument("--project-name", default="", help="Docker: the Compose project name, for setups that use one")
+    parser.add_argument("--compose-file", action="append", default=[], help="Docker: an extra Compose file (repeatable)")
     args = parser.parse_args(argv)
     root = args.target.expanduser().resolve()
     if not (root / "server" / "src" / "gameStore" / "storeRoot.js").is_file():
@@ -173,9 +181,11 @@ def main(argv: list[str]) -> int:
     else:
         request = {"command": "list"}
 
-    reply = run_store(root, detect_mode(root, args.mode), request)
+    settings = common.compose_settings(root, args.project_name, args.compose_file)
+    mode = detect_mode(root, args.mode, settings)
+    reply = run_store(root, mode, request, settings, args.data_dir)
     if args.command == "set":
-        print(f"Logo saved for corporation {reply['corporationID']} at {', '.join(map(str, reply['sizes']))} px.")
+        print(f"Logo saved for corporation {reply['corporationID']} at {', '.join(map(str, reply['sizes']))} px in {reply.get('folder')}.")
         print("Players see it in game the next time they log in (the client patch from install.py must be installed).")
     elif args.command == "remove":
         if reply["removed"]:
