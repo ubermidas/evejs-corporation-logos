@@ -1,174 +1,306 @@
-# Corporation logos for EveJS
+# Corporation Logos for EveJS
 
-An optional EveJS add-on that shows a corporation with your own picture
-instead of the in-game emblem builder's three layers, the way alliances
-already show PNG logos.
+Give player and bot corporations their own PNG logo in game, the way
+alliances already have one, instead of the three-layer emblem from the
+emblem builder.
 
-There are two ways to give a corporation a logo:
+<p align="center">
+  <img src="docs/screenshots/in-game-station.png" alt="A station's services panel showing The Foundation's PNG logo" height="300">
+  &nbsp;
+  <img src="docs/screenshots/in-game-corporation-window.png" alt="The Corporation window showing The Foundation's PNG logo" height="300">
+</p>
+<p align="center"><sub>In game: a corporation's PNG logo in a station's services panel and in the Corporation window (EveJS 261115.2, client 3396210).</sub></p>
 
-- **Standalone:** `corp_logo.py` (or double-click `Set-Corporation-Logo.cmd`
-  on Windows). Works on any EveJS server, with or without Playerbots.
-- **Playerbots dashboard:** with the Playerbots add-on installed, a
-  corporation's page on the dashboard has a **Logo** panel to upload and
-  remove logos, and logos show next to corporation names across the
-  dashboard.
+- **Works in game** wherever the client draws a corporation logo: info
+  windows, station services, the Corporation window, search, menus,
+  banners, the character sheet, the job board, the LP store and ship
+  cosmetics.
+- **No client changes.** EveJS sends a small script to the game client at
+  login; the add-on adds a few lines to it.
+- **Three ways to install:** Docker, EVEJS Launcher, or native with
+  `StartServer.bat`.
+- **Two ways to set logos:** a double-click tool that works on any EveJS
+  server, or the Playerbots dashboard.
+- **Safe to remove.** Every changed file is backed up; removal puts the
+  originals back and keeps your logo images.
 
-Both store the same files, so you can mix them.
+## Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Docker](#docker)
+  - [EVEJS Launcher](#evejs-launcher)
+  - [Native without the launcher](#native-without-the-launcher)
+  - [Check, update and remove](#check-update-and-remove)
+- [Setting a logo](#setting-a-logo)
+- [Playerbots integration](#playerbots-integration)
+- [How it works](#how-it-works)
+- [Troubleshooting](#troubleshooting)
+- [Compatibility and limits](#compatibility-and-limits)
+- [Development](#development)
+
+## Requirements
+
+| | |
+| --- | --- |
+| **EveJS** | 261115.2 (any version with the same login script and image server should work; the installer checks before changing anything) |
+| **Game client** | Build 3396210, the one EveJS 261115.2 serves |
+| **Python** | 3.9 or later, for `install.py` and `corp_logo.py`. [Pillow](https://pypi.org/project/pillow/) (`pip install pillow`) is optional: it lets the logo tool take JPEG, WebP and GIF and any shape |
+| **EVEJS Launcher** | 1.0.91 or later, for the launcher package |
+| **Docker** | Docker Desktop or Docker Engine with Compose, for Docker installs |
+
+## Installation
+
+Download the [latest release ZIP](dist/) and unpack it, or clone this
+repository. Then follow the route that matches how you run EveJS.
+
+| You run EveJS... | Use | Afterwards |
+| --- | --- | --- |
+| In Docker | `install.cmd` (or `install.py --docker --rebuild`) | The installer rebuilds and restarts the server |
+| With EVEJS Launcher | The launcher package, under **Mods → Import** | Enable the mod and start Game |
+| Natively with `StartServer.bat` | `install.cmd` (or `install.py --native`) with Game stopped | Start Game |
+
+The easiest start on Windows is to double-click **`install.cmd`**. It asks
+for your EveJS folder and how you run EveJS, then does the rest.
+
+### Docker
+
+1. Double-click `install.cmd`, enter your EveJS folder (for example
+   `C:\EVE\evejs`) and choose **Docker Compose**.
+2. Answer **yes** to rebuild and restart the server. This takes a few
+   minutes.
+
+Or, from a terminal in the unpacked folder:
+
+```sh
+python install.py "C:\EVE\evejs" --docker --rebuild
+```
+
+The rebuild keeps your existing Docker setup:
+
+- With **Playerbots** installed, it runs Playerbots' own
+  `python addons/playerbots/playerbots.py rebuild`, so Playerbots' Compose
+  files and settings (including launcher or Server Panel files) stay in
+  place.
+- Without Playerbots, it runs `docker compose build init` and
+  `docker compose up -d --no-deps --force-recreate server`.
+
+Leave out `--rebuild` to rebuild later yourself, for example with
+`RebuildPlayerbots.bat`.
+
+### EVEJS Launcher
+
+1. Stop **Game** in EVEJS Launcher.
+2. Open **Mods → Import** and choose
+   `evejs-corporation-logos-launcher-v1.0.0.zip` (in the release ZIP, or in
+   [`dist/`](dist/)).
+3. Enable **Corporation Logos**, then start Game.
+
+Disable and Remove in the launcher put the original EveJS files back; your
+logo images are kept. Let the launcher manage the add-on on its own:
+`install.py` refuses to change a launcher-managed folder natively. The
+mod's folder also holds `Set-Corporation-Logo.cmd` for setting logos.
+
+### Native without the launcher
+
+1. Stop Game.
+2. Double-click `install.cmd`, enter your EveJS folder and choose
+   **Native without the launcher**, or run:
+
+   ```sh
+   python install.py "C:\EVE\evejs" --native
+   ```
+
+3. Start Game.
+
+The installer checks Game's port and changes nothing while Game runs.
+
+### Check, update and remove
+
+```sh
+python install.py "C:\EVE\evejs" --check                     # report only
+python install.py "C:\EVE\evejs" --remove --docker --rebuild  # remove (Docker)
+python install.py "C:\EVE\evejs" --remove --native            # remove (native, Game stopped)
+```
+
+- **Check after updating EveJS.** An EveJS update can replace the files the
+  add-on changes. `--check` shows whether they are still in place, and
+  running the installer again puts them back. Launcher users re-enable the
+  mod.
+- **Backups.** `install.py` backs up every file before changing it, to
+  `<evejs>\.corp-logo-addon-backup-<time>\`. The launcher package uses
+  `<evejs>\_local\corporation-logos\backups\`.
+
+## Setting a logo
+
+A logo can be set from a PNG with the logo tool, or uploaded on the
+Playerbots dashboard ([below](#playerbots-integration)). Both store the same
+files, so you can mix them.
+
+### With the logo tool
+
+Double-click **`Set-Corporation-Logo.cmd`** and answer three questions: your
+EveJS folder, the corporation ID, and the image file. Or run:
+
+```sh
+python corp_logo.py set    "C:\EVE\evejs" 98000003 foundation.png
+python corp_logo.py list   "C:\EVE\evejs"
+python corp_logo.py remove "C:\EVE\evejs" 98000003
+```
+
+| | |
+| --- | --- |
+| **Corporation ID** | Shown in the corporation's info window and on the Playerbots dashboard. Player and bot corporations only (IDs from 2,000,000, such as 98000003); NPC corporations keep their game logos. |
+| **Image** | With Pillow, any PNG, JPEG, WebP or GIF: it is centred on a transparent square and saved at 32, 64, 128, 256, 512 and 1024 pixels. Without Pillow, a square PNG, saved as is at every size. A square picture of at least 256 × 256 looks best. |
+| **Docker** | The server must be running. The logo goes straight into its data volume; nothing is rebuilt. The tool uses the same Compose files and project as Playerbots; `--project-name` and `--compose-file` override them. |
+| **Native** | The logo goes into `_local\gameStore\images\Corporation` in the EveJS folder. If your game store lives elsewhere, add `--data-dir` with the path to its `data` folder. |
+
+**When players see it:** a corporation's first logo shows from each
+player's next login. A changed logo shows within an hour, when the client
+re-checks its copy.
+
+## Playerbots integration
+
+With the [Playerbots add-on](https://github.com/ubermidas/evejs-playerbots-addon/tree/corp-logos),
+logos can be uploaded and seen on the Playerbots dashboard.
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-logo-panel.png" alt="The Logo panel on a corporation's page of the Playerbots dashboard" width="760">
+</p>
+<p align="center">
+  <img src="docs/screenshots/dashboard-corporation-list.png" alt="The Playerbots dashboard's corporation list with a logo beside The Foundation" width="760">
+</p>
+
+**What you get on the dashboard**
+
+- **A Logo panel** on each corporation's page: **Choose image…**, check the
+  preview, then **Save logo**. **Remove logo** puts the emblem back. The
+  browser makes the six square sizes, so any PNG, JPEG, WebP or GIF works
+  without Pillow.
+- **Logos beside corporation names** on the corporation list and page,
+  pilot rows, the pilot panel, History and the killboard.
+- **A status line** in the Logo panel saying whether this add-on is
+  installed, that is, whether players will see the logo in game.
+
+**How the two fit together**
+
+| | Playerbots alone | This add-on alone | Both |
+| --- | --- | --- | --- |
+| Upload logos on the dashboard | ✓ | | ✓ |
+| Logos shown on the dashboard | ✓ | | ✓ |
+| Set logos with the logo tool | | ✓ | ✓ |
+| Logos shown in game | | ✓ | ✓ |
+
+Both write the same files, `Corporation/<corporationID>_<size>.png` in
+EveJS's runtime image folder, so a logo set either way shows in both places.
+Neither add-on edits a file the other manages, and they install in either
+order.
+
+**Setting it up**
+
+1. Install Playerbots with logo support. It is on the `corp-logos` branch of
+   [ubermidas/evejs-playerbots-addon](https://github.com/ubermidas/evejs-playerbots-addon/tree/corp-logos)
+   until it is released:
+
+   ```sh
+   git clone -b corp-logos https://github.com/ubermidas/evejs-playerbots-addon
+   cd evejs-playerbots-addon
+   python install.py "C:\EVE\evejs" --docker --start
+   ```
+
+2. Install this add-on as described under [Installation](#installation).
+   With Playerbots installed, `install.py --docker --rebuild` rebuilds
+   through Playerbots, so one rebuild covers both.
+3. Open the dashboard at `http://127.0.0.1:8080/#corporations`, open a
+   corporation and use its **Logo** panel.
+
+**Bot corporations.** Playerbots gives each new bot corporation a random
+emblem. To leave new bot corporations on the plain default emblem so you can
+give them PNGs, set `EVEJS_PLAYER_BOTS_CORPORATION_EMBLEMS=0` in EveJS's
+`.env` (Docker), or turn off **Random emblems for new bot corporations**
+under **Configure → New corporations** (launcher). Corporations with a PNG
+show the PNG either way.
+
+The Playerbots launcher package does not include the dashboard Logo panel
+yet; on launcher installs, set logos with the logo tool.
 
 ## How it works
 
-Logos are stored where EveJS keeps its other runtime images, one PNG per
-size, like alliance logos:
+The game client never asks the image server for a player corporation's
+logo: it always draws the three emblem layers. Alliances are different: the
+client downloads their logo from the image server. This add-on makes
+corporations with a PNG work like alliances.
 
-```
-<runtime images>/Corporation/<corporationID>_<size>.png    sizes 32, 64, 128, 256, 512, 1024
-```
+1. **Storage.** Logos live where EveJS keeps its other runtime images, one
+   PNG per size, beside alliance logos:
 
-On Docker that folder is inside the `evejs-data` volume
-(`/var/lib/evejs/gameStore/images`); on a native install it is next to the
-game store data.
+   ```
+   <runtime images>/Corporation/<corporationID>_<size>.png   sizes 32, 64, 128, 256, 512, 1024
+   ```
 
-The EVE client never asks the image server for a player corporation's logo:
-it always draws the emblem from the corporation's shape and colour layers.
-`install.py` adds a few lines to the script EveJS already sends the client
-at login. For every corporation that has a PNG, the client fetches it from
-the image server through its own corporation-logo loader and draws it in
-place of the emblem: menus, search, info windows, banners, the corporation
-home page, the character sheet, job board pages and the LP store. Ship
-cosmetics already fetch corporation logos from the image server, so they
-show the PNG too. Every other corporation keeps its emblem, and the emblem
-editor keeps showing emblems. No client files are changed.
+   In Docker that is `/var/lib/evejs/gameStore/images` in the `evejs-data`
+   volume; on native installs, `_local\gameStore\images` in the EveJS folder.
+2. **Image server.** EveJS's image server answers
+   `/Corporation/<id>_<size>.png` with the stored file.
+3. **Client patch.** At login, EveJS sends the client the list of
+   corporations that have a PNG. For those, the client's corporation-logo
+   drawing loads the PNG through its own image loader instead of the emblem
+   layers. Every other corporation keeps its emblem, and the emblem editor
+   still shows emblems.
 
-The list of corporations with a logo is sent at login, so a corporation that
-gets its first logo shows it from the player's next login. The client keeps a
-downloaded logo for an hour and then asks the image server again, so a
-changed logo appears within the hour; clearing the client's
-`Pictures\Corporations` cache folder shows it at once.
-
-## Install (once per server)
-
-Download the release ZIP from `dist/` (or clone this repository), then pick
-the route that matches how you run EveJS.
-
-### Docker, or native without the launcher
-
-Double-click `install.cmd` (or run `python install.py`) and answer the
-questions: your EveJS folder, and whether EveJS runs in Docker, through
-EVEJS Launcher, or natively with `StartServer.bat`. Without questions:
-
-```sh
-python install.py "C:\EVE\evejs" --docker --rebuild   # Docker: install, rebuild and restart
-python install.py "C:\EVE\evejs" --native             # native, Game stopped
-python install.py "C:\EVE\evejs" --check              # report only
-python install.py "C:\EVE\evejs" --remove --docker --rebuild
-```
-
-- **Docker:** `--rebuild` rebuilds the image and restarts the server. With
-  Playerbots installed it runs `addons/playerbots/playerbots.py rebuild`, so
-  Playerbots' own Compose settings (launcher or Server Panel files, project
-  name) are kept; otherwise it runs `docker compose build init` and
-  `up -d server`. Without `--rebuild`, rebuild yourself (for example
-  `RebuildPlayerbots.bat`).
-- **Native:** Game must be stopped; the installer checks its port and
-  changes nothing while Game runs. Start Game afterwards.
-
-### EVEJS Launcher (native)
-
-1. Stop Game.
-2. **Mods → Import** and choose `evejs-corporation-logos-launcher-v<version>.zip`.
-3. Enable **Corporation Logos**, then start Game.
-
-Disable and Remove in the launcher put the EveJS files back; logo images
-are kept. Don't also run `install.py` on a launcher-managed folder: it
-refuses native changes there. The mod's folder holds
-`Set-Corporation-Logo.cmd` for setting logos.
-
-### What changes in EveJS
-
-Each file is backed up first, to `<evejs>\.corp-logo-addon-backup-<time>\`
-(`install.py`) or `<evejs>\_local\corporation-logos\backups\` (launcher):
+What the add-on changes in EveJS:
 
 | File | Change |
 | --- | --- |
 | `server/src/services/corporation/corporationLogoClientDelivery.js` | New: builds the client patch. |
 | `server/src/network/tcp/handshake.js` | One block that adds the patch to the login script. |
-| `server/src/_secondary/image/imageRequestResolver.js` | Lets the image server answer `/Corporation/<id>_<size>.png` with the stored PNG. Left alone when the file already does this (an earlier hand edit); removal takes out only the lines this add-on added. |
+| `server/src/_secondary/image/imageRequestResolver.js` | Lets the image server answer `/Corporation/<id>_<size>.png` with the stored PNG. Left alone if it already does this (an earlier hand edit); removal takes out only the lines the add-on added. |
 
-The add-on never edits a file Playerbots manages, in either its Docker or
-its launcher form. An EveJS update can replace these files: run
-`install.py --check` (or re-enable the mod) afterwards.
+## Troubleshooting
 
-## Method 1: standalone
+| Problem | What to do |
+| --- | --- |
+| The emblem still shows in game | Log out and back in: the list of corporations with a logo is sent at login. Check that the add-on is installed (`install.py --check`) and that Docker installs were rebuilt. |
+| A changed logo still shows the old picture | The client re-checks after an hour. To see it at once, close the client and delete its `Pictures\Corporations` cache folder. |
+| Did the patch load? | The server log shows `CORP_LOGO_PNG_PATCH:OK:<count>` at each login, with the number of corporations that have a logo. A Python error there means the patch failed; the emblems keep working. |
+| `The EveJS server container is not running` | Start EveJS, then run the logo tool again. For setups with their own Compose files or project, add `--compose-file` or `--project-name`. |
+| `Stop Game first` | Native installs: stop Game before installing or removing. |
+| `EVEJS Launcher manages Corporation Logos in this folder` | Enable, disable or remove it in the launcher instead of `install.py`. |
+| The installer says the EveJS version is not supported | The login script or image server file looks different from what the add-on expects. Nothing was changed. |
 
-Double-click `Set-Corporation-Logo.cmd` and answer the questions, or:
+## Compatibility and limits
+
+- **Tested in game** on EveJS 261115.2 in Docker with client 3396210 (the
+  screenshots above). The client patch was written against that client's
+  own code.
+- **Launcher package:** it follows the format of the Playerbots launcher
+  package (manifest schema 3, helper protocol `evejs_launcher_mod_v1`). Its
+  helper is tested by driving it the way the launcher does, including
+  against a copy of a live EveJS install, but not yet inside EVEJS Launcher
+  itself.
+- **After a client update**, check that logos still show; the patch
+  targets the client's corporation-logo drawing (`CorpIcon.DoLayout`).
+- **Clothing:** a corporation logo drawn on character clothing still uses
+  the emblem.
+
+## Development
 
 ```sh
-python corp_logo.py set    "C:\EVE\evejs" 98000002 tyrell.png
-python corp_logo.py remove "C:\EVE\evejs" 98000002
-python corp_logo.py list   "C:\EVE\evejs"
+python -m unittest discover tests   # needs Node.js; Pillow optional
+python tools/build.py               # builds both ZIPs into dist/
 ```
-
-- **Docker:** the server must be running. The logo is written into its
-  volume with `docker compose exec`, using the same Compose files and project
-  as Playerbots when it is installed; nothing is rebuilt. `--project-name`
-  and `--compose-file` override them. Add `--docker` or `--native` to choose
-  explicitly.
-- **Native:** the logo goes into `_local/gameStore/images/Corporation` in the
-  EveJS folder. If your game store lives elsewhere, add `--data-dir` with its
-  `data` folder.
-- **Images:** with Pillow installed (`pip install pillow`), any PNG, JPEG,
-  WebP or GIF works: it is centred on a transparent square and resized for
-  each size. Without Pillow, use a square PNG; it is stored as is at every
-  size, as EveJS stores alliance logos.
-- **Which corporations:** player and bot corporations (ID 2,000,000 or
-  above, such as 98000002). NPC corporations keep their game logos. The ID is
-  on the corporation's info window and on the Playerbots dashboard.
-
-## Method 2: Playerbots dashboard
-
-Needs Playerbots with corporation-logo support: the `corp-logos` branch of
-[ubermidas/evejs-playerbots-addon](https://github.com/ubermidas/evejs-playerbots-addon/tree/corp-logos)
-until it is released.
-
-1. Open `http://127.0.0.1:8080/#corporations` and open a corporation.
-2. In the **Logo** panel, click **Choose image…**, check the preview and
-   click **Save logo**. **Remove logo** puts the emblem back.
-
-The dashboard works without this add-on, but then logos only show on the
-dashboard. The Logo panel says whether the in-game patch is installed.
-
-## Working alongside Playerbots
-
-Playerbots gives each new bot corporation a random in-game emblem. To give
-new bot corporations PNGs instead, set `EVEJS_PLAYER_BOTS_CORPORATION_EMBLEMS=0`
-(or turn off **Random emblems for new bot corporations** in the Windows
-launcher). Corporations with a PNG show the PNG either way.
-
-## Files
 
 | Path | What it is |
 | --- | --- |
-| `install.py`, `install.cmd` | The installer for Docker and native installs, with questions or flags. |
-| `launcher/` | The EVEJS Launcher mod: `evejs-launcher.mod.json` and `helper.cjs`, the lifecycle helper the launcher runs. |
-| `lib/patch.cjs` | The server changes in Node.js, used by the launcher helper; tests check it writes exactly what `install.py` writes. |
-| `corp_logo.py`, `Set-Corporation-Logo.cmd` | The standalone logo tool and its double-click launcher. |
-| `tools/corp-logo-store.js` | The part of `corp_logo.py` that runs where EveJS runs (passed with `node -e`). |
-| `addon_common.py` | Compose settings, Game-port check and prompts shared by the two Python tools. |
-| `files/server/src/services/corporation/corporationLogoClientDelivery.js` | The client patch copied into EveJS. |
-| `tools/build.py`, `dist/` | Builds the launcher ZIP and the full release ZIP; both are committed. |
-| `tests/` | `python -m unittest discover tests` (needs Node.js; Pillow optional). |
+| `install.py`, `install.cmd` | The installer, with questions or flags |
+| `launcher/` | The EVEJS Launcher mod: `evejs-launcher.mod.json` and `helper.cjs`, which the launcher runs on Enable, Disable, Remove and recovery |
+| `lib/patch.cjs` | The EveJS changes in Node.js for the launcher helper; the tests check it writes exactly what `install.py` writes |
+| `corp_logo.py`, `Set-Corporation-Logo.cmd` | The logo tool and its double-click launcher |
+| `tools/corp-logo-store.js` | The part of the logo tool that runs where EveJS runs (passed with `node -e`) |
+| `addon_common.py` | Compose settings, the Game-port check and prompts, shared by the Python tools |
+| `files/` | The client patch file copied into EveJS |
+| `tools/build.py`, `dist/` | Builds the launcher ZIP and the full release ZIP; both are committed, and the build is reproducible |
+| `docs/screenshots/` | The pictures in this README |
 
-## Limits
-
-- The launcher package follows the format of the Playerbots launcher
-  package (manifest schema 3, helper protocol `evejs_launcher_mod_v1`, EVEJS
-  Launcher 1.0.91 or later). It is tested by driving its helper the way the
-  launcher does, not yet in EVEJS Launcher itself.
-- The client patch targets `eveIcon.CorpIcon.DoLayout` in client build
-  3396210, the build EveJS 261115.2 serves. Check it again after a client
-  update.
-- The patch was checked against client 3396210's own code
-  (`CorpIcon.DoLayout(corpID, attributes)` and its three emblem sprites,
-  `photo.GetCorporationLogo(corpID, size, sprite)` and its one-hour cache),
-  but not yet seen working in game. After installing, the server log shows
-  `CORP_LOGO_PNG_PATCH:OK:<count>` at each login.
+The tests run against a small stand-in EveJS folder, so no EveJS checkout,
+Docker or game client is needed.

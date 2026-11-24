@@ -92,6 +92,7 @@ def main() -> int:
         *[(f"{release_folder}/{relative}", read(relative)) for relative in [
             *COMMON, "install.py", "install.cmd", "README.md", "lib/patch.cjs",
             "launcher/evejs-launcher.mod.json", "launcher/helper.cjs",
+            *sorted(path.relative_to(ROOT).as_posix() for path in (ROOT / "docs" / "screenshots").glob("*.png")),
         ]],
         (f"{release_folder}/{launcher_zip.name}", launcher_zip.read_bytes()),
     ]
