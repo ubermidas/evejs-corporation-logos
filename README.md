@@ -33,12 +33,17 @@ it always draws the emblem from the corporation's shape and colour layers.
 `install.py` adds a few lines to the script EveJS already sends the client
 at login. For every corporation that has a PNG, the client fetches it from
 the image server through its own corporation-logo loader and draws it in
-place of the emblem: menus, search, info windows and banners. Every other
-corporation keeps its emblem. No client files are changed.
+place of the emblem: menus, search, info windows, banners, the corporation
+home page, the character sheet, job board pages and the LP store. Ship
+cosmetics already fetch corporation logos from the image server, so they
+show the PNG too. Every other corporation keeps its emblem, and the emblem
+editor keeps showing emblems. No client files are changed.
 
-The ID list is sent at login, so players see a new logo from their next
-login. A client that already cached a picture of the same corporation may
-keep it until its `Pictures\Corporations` cache folder is cleared.
+The list of corporations with a logo is sent at login, so a corporation that
+gets its first logo shows it from the player's next login. The client keeps a
+downloaded logo for an hour and then asks the image server again, so a
+changed logo appears within the hour; clearing the client's
+`Pictures\Corporations` cache folder shows it at once.
 
 ## Install (once per server)
 
@@ -162,6 +167,8 @@ launcher). Corporations with a PNG show the PNG either way.
 - The client patch targets `eveIcon.CorpIcon.DoLayout` in client build
   3396210, the build EveJS 261115.2 serves. Check it again after a client
   update.
-- The patch is tested by code review and unit checks only so far; confirm
-  it in game after installing (the server log shows
-  `CORP_LOGO_PNG_PATCH:OK:<count>` at each login).
+- The patch was checked against client 3396210's own code
+  (`CorpIcon.DoLayout(corpID, attributes)` and its three emblem sprites,
+  `photo.GetCorporationLogo(corpID, size, sprite)` and its one-hour cache),
+  but not yet seen working in game. After installing, the server log shows
+  `CORP_LOGO_PNG_PATCH:OK:<count>` at each login.
