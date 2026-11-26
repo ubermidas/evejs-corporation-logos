@@ -43,8 +43,8 @@ emblem builder.
 
 | | |
 | --- | --- |
-| **EveJS** | 261115.2 (any version with the same login script and image server should work; the installer checks before changing anything) |
-| **Game client** | Build 3396210, the one EveJS 261115.2 serves |
+| **EveJS** | 261125.3 or 261115.2 (any version with the same login script and image server should work; the installer checks before changing anything) |
+| **Game client** | The build your EveJS serves: 3724492 for 261125.3, 3396210 for 261115.2 |
 | **Python** | 3.9 or later, for `install.py` and `corp_logo.py`. [Pillow](https://pypi.org/project/pillow/) (`pip install pillow`) is optional: it lets the logo tool take JPEG, WebP and GIF and any shape |
 | **EVEJS Launcher** | 1.0.91 or later, for the launcher package |
 | **Docker** | Docker Desktop or Docker Engine with Compose, for Docker installs |
@@ -273,6 +273,10 @@ What the add-on changes in EveJS:
 - **Tested in game** on EveJS 261115.2 in Docker with client 3396210 (the
   screenshots above). The client patch was written against that client's
   own code.
+- **EveJS 261125.3:** the installer patches a stock 261125.3 tree cleanly
+  (the login script and image server anchors are unchanged, and the patched
+  files load), and removal restores both files. Not yet checked in game with
+  client 3724492.
 - **Launcher package:** it follows the format of the Playerbots launcher
   package (manifest schema 3, helper protocol `evejs_launcher_mod_v1`). Its
   helper is tested by driving it the way the launcher does, including
